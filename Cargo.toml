@@ -1,0 +1,42 @@
+[package]
+name = "rustrestapitest"
+version = "0.0.0"
+publish = false
+authors = ["riros <ivanvalenkov@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+#serde-xml-rs = "0.3.1"
+#serde_derive = "1.0.91"
+#serde = "1.0.91"
+#[profile.release]
+#overflow-checks = true
+#actix = "0.8.1"
+
+raster = "0.2"
+
+
+rocket = "0.4"
+rocket_contrib = "0.4"
+
+
+multipart = "0.16"
+#http = "0.1"
+rayon = "1.*"
+reqwest = "0.9"
+mime = "0.3"
+#mime_guess="2.0.0-alpha.6"
+
+file_diff = "1.0"
+url = "1.7.*"
+
+serde = "1"
+serde_json = "1"
+serde_derive = "1"
+
+base64 = "0.10"
+
+graceful = "0.1"
+
+tempfile = "3.0"
+rand = "0.6.5"
