@@ -43,7 +43,7 @@ fn test_integration_form() {
         .part("file1", Part::file("./tests/data/img.jpg").unwrap())
         .part("file2", Part::file("./tests/data/img.png").unwrap())
         .part("link1", Part::text(
-            "https://static.ngs.ru/news/99/preview/7723aa3ee542cf82879e59b70613082c0bb790ee_800.jpg"
+            "http://www.lanzeva.ru/media/cache/3a/10/3a102f5862e95fc947e61fe70cc6ffda.jpg"
         ));
 
 

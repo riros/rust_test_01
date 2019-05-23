@@ -8,20 +8,20 @@ extern crate serde_derive;
 
 extern crate base64;
 
-extern crate multipart;
+extern crate comrak;
+extern crate graceful;
 extern crate mime;
-extern crate url;
+extern crate multipart;
+extern crate rand;
 extern crate raster;
 extern crate rayon;
-extern crate graceful;
 extern crate tempfile;
-extern crate rand;
-
+extern crate url;
 
 use rocket::http::{ContentType, Status};
-use rocket::response::Stream;
 use rocket::response::status::Custom;
-use rocket::{Data, Rocket};
+use rocket::response::Stream;
+use rocket::{Data, Response, Rocket};
 use rocket_contrib::serve::StaticFiles;
 use std::io::{self, Cursor, Read};
 
@@ -59,12 +59,25 @@ use std::thread::sleep;
 ////    }
 //}
 
+use comrak::{markdown_to_html, ComrakOptions};
+
+use rocket::response::content;
+use std::fs;
+
 #[get("/")]
-fn index() -> &'static str {
+fn index() -> content::Html<String> {
+    content::Html(format!(
+        "{}{}{}",
+        "<html>",
+        markdown_to_html(
+            fs::read_to_string("readme.md").unwrap().as_str(),
+            &ComrakOptions::default(),
+        ),
+        "</html>"
+    ))
 
     // riros read readme.md -> html
-//     Custom(Status::Ok, "<html><b>ok</b></html>")
-    "readme md file"
+    //     Custom(Status::Ok, "<html><b>ok</b></html>")
 }
 
 #[get("/favicon.ico")]
@@ -74,52 +87,52 @@ fn favicon() -> io::Result<Stream<File>> {
 
 #[post("/imgtest/v1", format = "multipart/form-data", data = "<data>")]
 // signature requires the request to have a `Content-Type`
-fn imgtestform(cont_type: &ContentType, data: Data) -> Result<Stream<Cursor<Vec<u8>>>, Custom<String>> {
+fn imgtestform(
+    cont_type: &ContentType,
+    data: Data,
+) -> Result<Stream<Cursor<Vec<u8>>>, Custom<String>> {
     // this and the next check can be implemented as a request guard but it seems like just
     // more boilerplate than necessary
-//    if !cont_type.is_form_data() {
-//        return Err(Custom(
-//            Status::BadRequest,
-//            "Content-Type not multipart/form-data".into(),
-//        ));
-//    }
+    //    if !cont_type.is_form_data() {
+    //        return Err(Custom(
+    //            Status::BadRequest,
+    //            "Content-Type not multipart/form-data".into(),
+    //        ));
+    //    }
 
-    let (_, boundary) = cont_type.params().find(|&(k, _)| k == "boundary").ok_or_else(
-        || Custom(
-            Status::BadRequest,
-            "`Content-Type: multipart/form-data` boundary param not provided".into(),
-        )
-    )?;
+    let (_, boundary) = cont_type
+        .params()
+        .find(|&(k, _)| k == "boundary")
+        .ok_or_else(|| {
+            Custom(
+                Status::BadRequest,
+                "`Content-Type: multipart/form-data` boundary param not provided".into(),
+            )
+        })?;
 
     match process_upload(boundary, data) {
         Ok(resp) => Ok(Stream::from(Cursor::new(resp))),
-        Err(err) => Err(Custom(Status::InternalServerError, err.to_string()))
+        Err(err) => Err(Custom(Status::InternalServerError, err.to_string())),
     }
 }
 
 fn rocket() -> Rocket {
     rocket::ignite()
-        .mount("/", routes![
-        imgtestform,
-        index,
-        favicon,
-        ])
+        .mount("/", routes![imgtestform, index, favicon,])
         .mount("/static", StaticFiles::from("static"))
 }
 
-
 fn main() {
-//    let signal_guard = SignalGuard::new();
-//    signal_guard.at_exit(move |sig| {
-//        println!("Signal {} received.", sig);
-//        while rayon::current_num_threads() > 0 {
-//            println!("wait thread work, sleep 1 sec ...");
-//            sleep(std::time::Duration::new(1, 0));
-//        }
-//    });
+    //    let signal_guard = SignalGuard::new();
+    //    signal_guard.at_exit(move |sig| {
+    //        println!("Signal {} received.", sig);
+    //        while rayon::current_num_threads() > 0 {
+    //            println!("wait thread work, sleep 1 sec ...");
+    //            sleep(std::time::Duration::new(1, 0));
+    //        }
+    //    });
 
     println!("Start server...");
     rocket().launch();
     println!("Shutting down server...");
-
 }

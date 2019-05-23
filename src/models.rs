@@ -1,16 +1,23 @@
 use base64;
 use rocket::http::hyper::mime::SubLevel;
 
+use core::borrow::{Borrow, BorrowMut};
+use core::fmt::Debug;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use raster::Image;
 use reqwest::Client;
 use std::env::split_paths;
-use std::fs::{remove_file, File};
+use std::fs::{remove_file, rename, File};
+use std::intrinsics::write_bytes;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use tempfile::{tempdir, tempfile};
 use url::Url;
+
+use raster::error::RasterError;
+
+use raster::editor;
 
 pub trait ImageInterface {
     fn from_url(url: &Url) -> Self;
@@ -19,6 +26,22 @@ pub trait ImageInterface {
     //    fn get_image(&self) -> Result<Image, &'static str>;
 }
 
+/// Request
+/// {
+/// images:[
+///     {
+///         name:<String>,
+///         image_type:<String>,
+///         data: {
+///             base64:<base64<String>>,
+///             url: <String>,
+///             path: <String>
+///         }
+///     }
+/// ]
+///
+/// }
+///
 #[derive(Debug)]
 pub struct Images {
     images: Vec<ImageStruct>,
@@ -47,13 +70,13 @@ impl ImageSource {
                 let filename: &str = v1[v1.len() - 1];
 
                 let sp: Vec<&str> = filename.split('.').collect();
-                let mut ext: &str = sp[sp.len() - 1].clone();
+                let url_ext = sp[sp.len() - 1];
 
-                match ext {
-                    "jpg" => ext = SubLevel::Jpeg.as_str(),
-                    "png" => ext = SubLevel::Png.as_str(),
+                let ext = match url_ext {
+                    "jpg" => SubLevel::Jpeg.as_str(),
+                    "png" => SubLevel::Png.as_str(),
                     _ => {
-                        println!("Error parsing url file extension '{}'", ext);
+                        panic!("Error parsing url file extension '{}'", url_ext);
                     }
                 };
                 Some((filename.to_string(), ext.to_string()))
@@ -100,43 +123,95 @@ impl ImageInterface for ImageSource {
 }
 
 impl ImageStruct {
-    pub fn get_image(&self) -> Result<Image, &'static str> {
-        fn image_from_reader<R: ?Sized>(reader: &mut R) -> raster::Image
+    pub fn make_thumbnail(&self, h: i32, w: i32) -> Result<(), RasterError> {
+        let mut img = self.get_image().unwrap();
+        //        let mut img = self.get_image().unwrap().borrow_mut();
+        editor::resize(img.borrow_mut(), w, h, raster::editor::ResizeMode::Fit)?;
+        raster::save(
+            img.borrow_mut(),
+            Path::new("static").join(&self.name).to_str().unwrap(),
+        )?;
+        Ok(())
+    }
+
+    pub fn get_image<'a>(&self) -> Result<Image, RasterError> {
+        fn image_from_reader<'a, R: ?Sized>(
+            reader: &mut R,
+            image_type: &str,
+        ) -> Result<Image, RasterError>
         where
             R: Read,
         {
             let rand_sring: String = thread_rng().sample_iter(&Alphanumeric).take(8).collect();
             let tmpdir = tempdir().unwrap();
-            let mut file_path = tmpdir.path().join(rand_sring);
-            dbg!(&file_path);
-            let mut tmpfile = File::open(&file_path).unwrap();
-
+            let file_path = tmpdir.path().join(rand_sring);
+            //            dbg!(&file_path);
+            let mut tmpfile = File::create(&file_path).unwrap();
             io::copy(reader, &mut tmpfile).unwrap();
-
-            let img = raster::open(&file_path.to_str().unwrap()).unwrap();
             drop(tmpfile);
-            remove_file(file_path).unwrap();
-            img
-        }
-        let imgsrc = &self.data.unwrap();
 
-        match &self.path {
+            let new_file_path = &rename_file(&file_path, image_type);
+
+            //            dbg!(new_file_path);
+
+            //            let mut img = raster::open(new_file_path);
+
+            let i = raster::open(new_file_path)?;
+            remove_file(new_file_path)?;
+            Ok(i)
+            //            match img {
+            //                Ok (r) => {
+            //                    Ok(r)
+            //                }
+            //                Err(e) => {
+            //                    dbg!(&e);
+            //                    Err("Image file can open by raster module. ")
+            //                }
+            //            }
+        }
+
+        fn rename_file(pathbuf: &PathBuf, ext: &str) -> String {
+            let new_path = format!("{}.{}", &pathbuf.to_str().unwrap(), ext);
+            rename(pathbuf.to_str().unwrap(), &new_path).unwrap();
+            new_path
+        }
+
+        let imgsrc: &ImageSource =
+//            &self.data.unwrap();
+            match &self.data {
+                Some(d) => { d }
+                None => {
+                    dbg!(&self);
+                    panic!("No data field in ImageSource")
+                }
+            };
+
+        match &imgsrc.path {
             Some(pathbuf) => {
-                dbg!(&pathbuf);
-                Ok(raster::open(pathbuf.to_str().unwrap()).unwrap())
+                let new_filename = rename_file(pathbuf, &self.image_type.to_string());
+                //                dbg!(&new_filename);
+                let retimage = raster::open(&new_filename).unwrap();
+                Ok(retimage)
             }
-            None => match &self.url {
+            None => match &imgsrc.url {
                 Some(url) => {
                     let mut resp = Client::new().get(url.as_str()).send().unwrap();
-                    Ok(image_from_reader(&mut resp))
+
+                    match image_from_reader(&mut resp, &self.image_type.as_str()) {
+                        Ok(im) => Ok(im),
+                        Err(e) => Err(e),
+                    }
                 }
-                None => match &self.base64 {
+                None => match &imgsrc.base64 {
                     Some(b64) => {
                         let mut reader = base64::decode(b64).unwrap();
                         let mut reader: &[u8] = reader.as_mut();
-                        Ok(image_from_reader(&mut reader))
+                        match image_from_reader(&mut reader, &self.image_type.as_str()) {
+                            Ok(im) => Ok(im),
+                            Err(e) => Err(e),
+                        }
                     }
-                    None => Err("No image data"),
+                    None => Err(RasterError::Unexpected),
                 },
             },
         }
@@ -150,34 +225,22 @@ impl ImageInterface for ImageStruct {
         let (filename, filetype) = ims.extract_filename_and_type_from_url().unwrap();
 
         ImageStruct {
-            name: filename.clone(),
-            image_type: filetype.clone(),
+            name: filename,
+            image_type: filetype,
             data: Some(ims),
         }
     }
 
-    fn from_file(file_name: &String, file_type: &String, file_path: &PathBuf) -> ImageStruct {
-        let ims: ImageSource = ImageInterface::from_file(file_name, file_type, file_path);
+    fn from_file(_file_name: &String, _file_type: &String, _file_path: &PathBuf) -> ImageStruct {
+        let ims: ImageSource = ImageInterface::from_file(_file_name, _file_type, _file_path);
         ImageStruct {
-            name: file_name.clone(),
-            image_type: file_type.clone(),
+            name: _file_name.clone(),
+            image_type: _file_type.clone(),
             data: Some(ims),
         }
     }
 
-    fn from_base64(file_name: &str, file_type: &str, base64_str: String) -> ImageStruct {
+    fn from_base64(file_name: &str, _file_type: &str, _base64_str: String) -> ImageStruct {
         panic!("Not Implemented!");
-        ImageStruct::default()
     }
-
-    //    fn get_image(&self) -> Result<Image, &'static str> {
-    //        match &self.data {
-    //            Some(imsrc) => imsrc.get_image(),
-    //            None => Err("No data")
-    //        }
-    //    }
 }
-
-//impl TimageObj for imageObj{
-//
-//}

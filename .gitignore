@@ -1,2 +1,6 @@
 /target
 **/*.rs.bk
+static/*.jpg
+static/*.png
+static/*.jpeg
+
