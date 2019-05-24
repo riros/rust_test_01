@@ -8,20 +8,23 @@ extern crate serde_derive;
 
 extern crate base64;
 
-extern crate comrak;
+#[cfg(test)]
+mod tests;
+
+//extern crate comrak;
 extern crate graceful;
 extern crate mime;
 extern crate multipart;
 extern crate rand;
 extern crate raster;
 extern crate rayon;
-extern crate tempfile;
+//extern crate tempfile;
 extern crate url;
 
 use rocket::http::{ContentType, Status};
 use rocket::response::status::Custom;
 use rocket::response::Stream;
-use rocket::{Data, Response, Rocket};
+use rocket::{Data, Request, Response, Rocket};
 use rocket_contrib::serve::StaticFiles;
 use std::io::{self, Cursor, Read};
 
@@ -64,8 +67,13 @@ use comrak::{markdown_to_html, ComrakOptions};
 use rocket::response::content;
 use std::fs;
 
+#[get("/ping")]
+fn pong() -> content::Plain<String> {
+    content::Plain("pong".to_string())
+}
+
 #[get("/")]
-fn index() -> content::Html<String> {
+pub fn index() -> content::Html<String> {
     content::Html(format!(
         "{}{}{}",
         "<html>",
@@ -116,13 +124,30 @@ fn imgtestform(
     }
 }
 
-fn rocket() -> Rocket {
-    rocket::ignite()
-        .mount("/", routes![imgtestform, index, favicon,])
-        .mount("/static", StaticFiles::from("static"))
+#[catch(404)]
+fn not_found(request: &Request) -> content::Html<String> {
+    let html = match request.format() {
+        Some(ref mt) if !mt.is_json() && !mt.is_plain() => {
+            format!("<p>'{}' requests are not supported.</p>", mt)
+        }
+        _ => format!(
+            "<p>Sorry, '{}' is an invalid path! Try \
+             /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
+            request.uri()
+        ),
+    };
+
+    content::Html(html)
 }
 
-fn main() {
+pub fn rocket() -> Rocket {
+    rocket::ignite()
+        .mount("/", routes![imgtestform, index, favicon, pong,])
+        .mount("/static", StaticFiles::from("static"))
+        .register(catchers![not_found])
+}
+
+pub fn main() {
     //    let signal_guard = SignalGuard::new();
     //    signal_guard.at_exit(move |sig| {
     //        println!("Signal {} received.", sig);

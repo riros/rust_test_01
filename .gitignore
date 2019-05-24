@@ -1,6 +1,6 @@
 /target
 **/*.rs.bk
-static/*.jpg
-static/*.png
-static/*.jpeg
+media/thumbnails/*.jpg
+media/thumbnails/*.png
+media/thumbnails/*.jpeg
 

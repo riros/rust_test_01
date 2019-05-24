@@ -129,7 +129,10 @@ impl ImageStruct {
         editor::resize(img.borrow_mut(), w, h, raster::editor::ResizeMode::Fit)?;
         raster::save(
             img.borrow_mut(),
-            Path::new("static").join(&self.name).to_str().unwrap(),
+            Path::new("media/thumbnails")
+                .join(&self.name)
+                .to_str()
+                .unwrap(),
         )?;
         Ok(())
     }
@@ -159,15 +162,6 @@ impl ImageStruct {
             let i = raster::open(new_file_path)?;
             remove_file(new_file_path)?;
             Ok(i)
-            //            match img {
-            //                Ok (r) => {
-            //                    Ok(r)
-            //                }
-            //                Err(e) => {
-            //                    dbg!(&e);
-            //                    Err("Image file can open by raster module. ")
-            //                }
-            //            }
         }
 
         fn rename_file(pathbuf: &PathBuf, ext: &str) -> String {
