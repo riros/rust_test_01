@@ -3,29 +3,26 @@
 
 #[macro_use]
 extern crate rocket;
-extern crate rocket_contrib;
-extern crate serde_derive;
-
 extern crate base64;
+extern crate graceful;
+extern crate mime;
+extern crate multipart;
+extern crate num_traits;
+extern crate rand;
+extern crate raster;
+extern crate rayon;
+extern crate rocket_contrib;
+extern crate serde;
+extern crate serde_derive;
+extern crate sysinfo;
+extern crate url;
 
 #[cfg(test)]
 mod tests;
 
-//extern crate comrak;
-extern crate graceful;
-extern crate mime;
-extern crate multipart;
-extern crate rand;
-extern crate raster;
-extern crate rayon;
-//extern crate tempfile;
-extern crate num_traits;
-extern crate sysinfo;
-extern crate url;
-//extern crate file_diff;
-
 use rocket::http::{ContentType, Status};
 use rocket::response::status::Custom;
+use rocket::response::Responder;
 use rocket::response::Stream;
 use rocket::{Data, Request, Response, Rocket};
 use rocket_contrib::serve::StaticFiles;
@@ -35,36 +32,38 @@ mod functions;
 mod models;
 
 use functions::*;
+use rocket_contrib::json::{Json, JsonValue};
 use std::fs::File;
 
 use graceful::SignalGuard;
-use std::env;
-use std::thread::sleep;
 
-//#[post("/imgtest/v1", format="json", data = "<data>")]
-//// signature requires the request to have a `Content-Type`
-//fn imgtestjson(cont_type: &ContentType, data: Data) -> Result<Stream<Cursor<Vec<u8>>>, Custom<String>> {
-//    // this and the next check can be implemented as a request guard but it seems like just
-//    // more boilerplate than necessary
-////    if !cont_type.is_form_data() {
-////        return Err(Custom(
-////            Status::BadRequest,
-////            "Content-Type not multipart/form-data".into(),
-////        ));
-////    }
-////
-////    let (_, boundary) = cont_type.params().find(|&(k, _)| k == "boundary").ok_or_else(
-////        || Custom(
-////            Status::BadRequest,
-////            "`Content-Type: multipart/form-data` boundary param not provided".into(),
-////        )
-////    )?;
-////
-////    match process_upload(boundary, data) {
-////        Ok(resp) => Ok(Stream::from(Cursor::new(resp))),
-////        Err(err) => Err(Custom(Status::InternalServerError, err.to_string()))
-////    }
-//}
+#[post("/imgtest/v1", format = "json", data = "<message>")]
+// signature requires the request to have a `Content-Type`
+fn imgtestjson(
+    cont_type: &ContentType,
+    message: Json<models::Images>,
+) -> Option<Json<&'static str>> {
+    Some(Json(r##"{"status":"ok"}"##))
+
+    //    if !cont_type.is_form_data() {
+    //        return Err(Custom(
+    //            Status::BadRequest,
+    //            "Content-Type not multipart/form-data".into(),
+    //        ));
+    //    }
+    //
+    //    let (_, boundary) = cont_type.params().find(|&(k, _)| k == "boundary").ok_or_else(
+    //        || Custom(
+    //            Status::BadRequest,
+    //            "`Content-Type: multipart/form-data` boundary param not provided".into(),
+    //        )
+    //    )?;
+    //
+    //    match process_upload(boundary, data) {
+    //        Ok(resp) => Ok(Stream::from(Cursor::new(resp))),
+    //        Err(err) => Err(Custom(Status::InternalServerError, err.to_string()))
+    //    }
+}
 
 use comrak::{markdown_to_html, ComrakOptions};
 
@@ -126,27 +125,45 @@ fn imgtestform(
     }
 }
 
-#[catch(404)]
-fn not_found(request: &Request) -> content::Html<String> {
-    let html = match request.format() {
-        Some(ref mt) if !mt.is_json() && !mt.is_plain() => {
-            format!("<p>'{}' requests are not supported.</p>", mt)
-        }
-        _ => format!(
-            "<p>Sorry, '{}' is an invalid path! Try \
-             /hello/&lt;name&gt;/&lt;age&gt; instead.</p>",
-            request.uri()
-        ),
-    };
+//#[catch(404)]
+//fn not_found(req: &rocket::Request) -> JsonValue {
+//    dbg!(req);
+//    json!({
+//        "status": "error",
+//        "reason": "unknown"
+//    })
+//}
 
-    content::Html(html)
+#[catch(500)]
+fn internal_error() -> &'static str {
+    "Whoops! Looks like we messed up."
 }
+
+#[catch(404)]
+fn not_found(req: &Request) -> String {
+    format!("I couldn't find '{}'. Try something else?", req.uri())
+}
+
+#[catch(400)]
+fn bad_request(req: &Request) -> String {
+    dbg!(req);
+    format!("I couldn't find '{}'. Try something else?", req.uri())
+}
+
+//fn handle_400<'r>(req: &'r Request) -> Result<Response<'r>, Status> {
+//    dbg!(&req);
+//    let res = Custom(Status::NotFound, format!("404: {}", req.uri()));
+//    res.respond_to(req)
+//}
 
 pub fn rocket() -> Rocket {
     rocket::ignite()
-        .mount("/", routes![imgtestform, index, favicon, pong,])
+        .mount(
+            "/",
+            routes![imgtestform, index, favicon, pong, imgtestjson,],
+        )
         .mount("/static", StaticFiles::from("static"))
-        .register(catchers![not_found])
+        .register(catchers![not_found, internal_error, bad_request])
 }
 
 pub fn main() {

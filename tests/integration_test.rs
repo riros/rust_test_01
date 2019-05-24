@@ -6,12 +6,16 @@ extern crate rocket;
 
 // importing common module.
 mod common;
+
 use common::RocketLocalhostServer;
 use core::borrow::BorrowMut;
 use file_diff::diff_files;
+use rayon::iter::IntoParallelIterator;
 use reqwest::multipart::{Form, Part};
 use std::fs::remove_file;
 use std::fs::File;
+
+use rayon::prelude::*;
 
 #[test]
 fn test_request_multipart_form_process() {
@@ -49,25 +53,33 @@ fn test_request_multipart_form_process() {
     rocket_server.print_info();
     rocket_server.shutdown();
 
-    //         TODO files check
-    assert!(!diff_files(
-        File::open("./tests/data/img.jpg").unwrap().borrow_mut(),
-        File::open("media/thumbnails/img.jpg").unwrap().borrow_mut(),
-    ));
-    assert!(!diff_files(
-        File::open("./tests/data/img.png").unwrap().borrow_mut(),
-        File::open("media/thumbnails/img.png").unwrap().borrow_mut(),
-    ));
-    assert!(!diff_files(
-        File::open("./tests/data/3a102f5862e95fc947e61fe70cc6ffda.jpg")
-            .unwrap()
-            .borrow_mut(),
-        File::open("media/thumbnails/3a102f5862e95fc947e61fe70cc6ffda.jpg")
-            .unwrap()
-            .borrow_mut(),
-    ));
-
+    let cmp_vect: Vec<(&'static str, &'static str)> = vec![
+        ("./tests/data/img.jpg", "media/thumbnails/img.jpg"),
+        ("./tests/data/img.png", "media/thumbnails/img.png"),
+        (
+            "./tests/data/3a102f5862e95fc947e61fe70cc6ffda.jpg",
+            "media/thumbnails/3a102f5862e95fc947e61fe70cc6ffda.jpg",
+        ),
+    ];
+    cmp_vect.into_par_iter().for_each(|i| check_file(i));
+    //    compare_files(cmp_vect);
     remove_fiels();
+}
+
+//fn compare_files(src: Vec<(&'static str, &'static str)>) {
+//    for (src, dst) in src {
+//        assert!(!diff_files(
+//            File::open(src).unwrap().borrow_mut(),
+//            File::open(dst).unwrap().borrow_mut(),
+//        ));
+//    }
+//}
+
+fn check_file(file_pair: (&'static str, &'static str)) {
+    assert!(!diff_files(
+        File::open(file_pair.0).unwrap().borrow_mut(),
+        File::open(file_pair.1).unwrap().borrow_mut(),
+    ));
 }
 
 fn remove_fiels() {

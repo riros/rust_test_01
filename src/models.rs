@@ -1,21 +1,20 @@
 use base64;
 use rocket::http::hyper::mime::SubLevel;
 
-use core::borrow::{Borrow, BorrowMut};
-use core::fmt::Debug;
+use core::borrow::BorrowMut;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
+use raster::error::RasterError;
 use raster::Image;
 use reqwest::Client;
-use std::env::split_paths;
+use rocket_contrib::json::{Json, JsonValue};
 use std::fs::{remove_file, rename, File};
-use std::intrinsics::write_bytes;
-use std::io::{self, Read, Write};
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
-use tempfile::{tempdir, tempfile};
+use tempfile::tempdir;
 use url::Url;
 
-use raster::error::RasterError;
+use serde::{Deserialize, Serialize};
 
 use raster::editor;
 
@@ -42,22 +41,22 @@ pub trait ImageInterface {
 ///
 /// }
 ///
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Images {
     images: Vec<ImageStruct>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ImageStruct {
     name: String,
     image_type: String,
     data: Option<ImageSource>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ImageSource {
     base64: Option<String>,
-    url: Option<Url>,
+    url: Option<String>,
     path: Option<PathBuf>,
 }
 
@@ -65,7 +64,8 @@ impl ImageSource {
     fn extract_filename_and_type_from_url(&self) -> Option<(String, String)> {
         match &self.url {
             Some(url) => {
-                let ref v1 = url.path_segments().map(|c| c.collect::<Vec<_>>()).unwrap();
+                let surl = Url::parse(url.as_str()).unwrap(); // todo: catch errors
+                let ref v1 = surl.path_segments().map(|c| c.collect::<Vec<_>>()).unwrap();
 
                 let filename: &str = v1[v1.len() - 1];
 
@@ -99,7 +99,7 @@ impl Default for ImageStruct {
 impl ImageInterface for ImageSource {
     fn from_url(url: &Url) -> ImageSource {
         ImageSource {
-            url: Some(url.clone()),
+            url: Some(url.clone().to_string()),
             base64: None,
             path: None,
         }
