@@ -50,4 +50,7 @@ graceful = "0.1"
 tempfile = "3.0"
 rand = "0.6"
 
-comrak="0.6.2"
+comrak="0.6"
+
+sysinfo = "0.8"
+num-traits = "0.2"

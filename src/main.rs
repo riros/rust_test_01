@@ -19,7 +19,10 @@ extern crate rand;
 extern crate raster;
 extern crate rayon;
 //extern crate tempfile;
+extern crate num_traits;
+extern crate sysinfo;
 extern crate url;
+//extern crate file_diff;
 
 use rocket::http::{ContentType, Status};
 use rocket::response::status::Custom;
@@ -35,6 +38,7 @@ use functions::*;
 use std::fs::File;
 
 use graceful::SignalGuard;
+use std::env;
 use std::thread::sleep;
 
 //#[post("/imgtest/v1", format="json", data = "<data>")]
@@ -75,13 +79,11 @@ fn pong() -> content::Plain<String> {
 #[get("/")]
 pub fn index() -> content::Html<String> {
     content::Html(format!(
-        "{}{}{}",
-        "<html>",
+        "<html>{}</html>",
         markdown_to_html(
             fs::read_to_string("readme.md").unwrap().as_str(),
             &ComrakOptions::default(),
-        ),
-        "</html>"
+        )
     ))
 
     // riros read readme.md -> html

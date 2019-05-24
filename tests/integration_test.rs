@@ -2,41 +2,27 @@
 
 extern crate file_diff;
 extern crate mime;
-extern crate reqwest;
 extern crate rocket;
-
-use serde_json;
-
-use rocket::http::{Accept, ContentType, Header, MediaType, Method, Status};
-use rocket::local::Client;
 
 // importing common module.
 mod common;
-
-use common::*;
-//use mime_guess;
-
+use common::RocketLocalhostServer;
+use core::borrow::BorrowMut;
+use file_diff::diff_files;
 use reqwest::multipart::{Form, Part};
-
 use std::fs::remove_file;
-//use rocket::http::ext::IntoCollection;
-//use rocket_http::ext::IntoCollection;
-//use reqwest::multipart::*;
-//use reqwest::multipart::Form;
-
-//use file_diff::{diff_files};
-//use std::fs::{File};
+use std::fs::File;
 
 #[test]
-fn test_request_multipart_form() {
+fn test_request_multipart_form_process() {
     common::setup();
-    let rocket_server = common::RocketServer::default();    
 
-    let thumbpath = "media/thumbnails/".to_string();
+    // ~~~!!! Only one rocket instance work. Dont use this in other tests.
+    let mut rocket_server = RocketLocalhostServer::new();
+    // sleep 3 sec
 
     println!("Removing files...");
-    remove_file(thumbpath.clone() + "img.jpg").unwrap_or_default();
-    remove_file(thumbpath.clone() + "img.png").unwrap_or_default();
+    remove_fiels();
 
     let form = Form::new()
         .part("text1", Part::text("mutipart multifile upload test"))
@@ -49,7 +35,7 @@ fn test_request_multipart_form() {
             ),
         );
 
-    let url = "http://localhost:8000/imgtest/v1";
+    let url = "http://localhost:8002/imgtest/v1";
     println!("Send request {}", &url);
     let service = reqwest::Client::new();
     let resp = service
@@ -60,5 +46,34 @@ fn test_request_multipart_form() {
 
     assert!(resp.status().is_success());
 
-    // TODO files check
+    rocket_server.print_info();
+    rocket_server.shutdown();
+
+    //         TODO files check
+    assert!(!diff_files(
+        File::open("./tests/data/img.jpg").unwrap().borrow_mut(),
+        File::open("media/thumbnails/img.jpg").unwrap().borrow_mut(),
+    ));
+    assert!(!diff_files(
+        File::open("./tests/data/img.png").unwrap().borrow_mut(),
+        File::open("media/thumbnails/img.png").unwrap().borrow_mut(),
+    ));
+    assert!(!diff_files(
+        File::open("./tests/data/3a102f5862e95fc947e61fe70cc6ffda.jpg")
+            .unwrap()
+            .borrow_mut(),
+        File::open("media/thumbnails/3a102f5862e95fc947e61fe70cc6ffda.jpg")
+            .unwrap()
+            .borrow_mut(),
+    ));
+
+    remove_fiels();
+}
+
+fn remove_fiels() {
+    const THUMBPATH: &str = "media/thumbnails/";
+    remove_file(String::from(THUMBPATH) + "img.jpg").unwrap_or_default();
+    remove_file(String::from(THUMBPATH) + "img.png").unwrap_or_default();
+    remove_file(String::from(THUMBPATH) + "3a102f5862e95fc947e61fe70cc6ffda.jpg")
+        .unwrap_or_default();
 }
