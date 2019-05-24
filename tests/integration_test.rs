@@ -13,6 +13,7 @@ use rocket::local::Client;
 // importing common module.
 mod common;
 
+use common::*;
 //use mime_guess;
 
 use reqwest::multipart::{Form, Part};
@@ -29,6 +30,7 @@ use std::fs::remove_file;
 #[test]
 fn test_request_multipart_form() {
     common::setup();
+    let rocket_server = common::RocketServer::default();    
 
     let thumbpath = "media/thumbnails/".to_string();
 
