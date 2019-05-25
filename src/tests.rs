@@ -75,10 +75,10 @@ fn test_integration_json() {
     );
 
     vec![
-        ("./tests/data/img.jpg", "media/thumbnails/img.json.jpg"),
-        ("./tests/data/img.png", "media/thumbnails/img.json.png"),
+        ("tests/data/img.jpg", "media/thumbnails/img.json.jpg"),
+        ("tests/data/img.png", "media/thumbnails/img.json.png"),
         (
-            "./tests/data/3a102f5862e95fc947e61fe70cc6ffda.jpg",
+            "tests/data/3a102f5862e95fc947e61fe70cc6ffda.jpg",
             "media/thumbnails/img.json.link.jpg",
         ),
     ]
