@@ -16,6 +16,19 @@ use std::path::PathBuf;
 
 use raster::Image;
 
+use crate::models::Images;
+
+pub fn process_json(imgs: Images) -> Result<(), &'static str> {
+    println!("Start {} threads.", rayon::current_num_threads());
+    // Start rayon multiprocess
+    imgs.images
+        .into_par_iter()
+        .try_for_each(|i| i.make_thumbnail(100, 100))
+        .expect("Что-то пошло не так ;)");
+    println!("Threads done.");
+    Ok(())
+}
+
 pub fn process_upload(boundary: &str, data: Data) -> io::Result<Vec<u8>> {
     let mut out = Vec::new();
 
@@ -117,7 +130,7 @@ fn push_image_struct_from_file(
 ) {
     println!("processing {}.. ", sl.to_string());
     match sd {
-        SavedData::File(pathbuf, size) => {
+        SavedData::File(pathbuf, _) => {
             to_vector.push(ImageInterface::from_file(
                 &file_name,
                 &sl.to_string(),

@@ -7,7 +7,7 @@ use rand::{thread_rng, Rng};
 use raster::error::RasterError;
 use raster::Image;
 use reqwest::Client;
-use rocket_contrib::json::{Json, JsonValue};
+//use rocket_contrib::json::{Json, JsonValue};
 use std::fs::{remove_file, rename, File};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
@@ -19,9 +19,9 @@ use serde::{Deserialize, Serialize};
 use raster::editor;
 
 pub trait ImageInterface {
-    fn from_url(url: &Url) -> Self;
-    fn from_file(file_name: &String, file_type: &String, file_path: &PathBuf) -> Self;
-    fn from_base64(file_name: &str, file_type: &str, base64_str: String) -> Self;
+    fn from_url(_url: &Url) -> Self;
+    fn from_file(_file_name: &String, _file_type: &String, _file_path: &PathBuf) -> Self;
+    fn from_base64(_file_name: &str, _file_type: &str, _base64_str: String) -> Self;
     //    fn get_image(&self) -> Result<Image, &'static str>;
 }
 
@@ -43,7 +43,7 @@ pub trait ImageInterface {
 ///
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Images {
-    images: Vec<ImageStruct>,
+    pub images: Vec<ImageStruct>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -105,15 +105,15 @@ impl ImageInterface for ImageSource {
         }
     }
 
-    fn from_file(file_name: &String, file_type: &String, file_path: &PathBuf) -> ImageSource {
+    fn from_file(_file_name: &String, _file_type: &String, _file_path: &PathBuf) -> ImageSource {
         ImageSource {
             url: None,
             base64: None,
-            path: Some(file_path.clone()),
+            path: Some(_file_path.clone()),
         }
     }
 
-    fn from_base64(file_name: &str, file_type: &str, base64_str: String) -> ImageSource {
+    fn from_base64(_file_name: &str, _file_type: &str, base64_str: String) -> ImageSource {
         ImageSource {
             url: None,
             base64: Some(base64_str),
@@ -234,7 +234,7 @@ impl ImageInterface for ImageStruct {
         }
     }
 
-    fn from_base64(file_name: &str, _file_type: &str, _base64_str: String) -> ImageStruct {
+    fn from_base64(_file_name: &str, _file_type: &str, _base64_str: String) -> ImageStruct {
         panic!("Not Implemented!");
     }
 }

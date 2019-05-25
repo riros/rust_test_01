@@ -32,66 +32,26 @@ mod functions;
 mod models;
 
 use functions::*;
+use rocket_contrib::json;
 use rocket_contrib::json::{Json, JsonValue};
 use std::fs::File;
 
+use comrak::{markdown_to_html, ComrakOptions};
 use graceful::SignalGuard;
+use rocket::response::content;
+use std::fs;
 
 #[post("/imgtest/v1", format = "json", data = "<message>")]
 // signature requires the request to have a `Content-Type`
 fn imgtestjson(
-    cont_type: &ContentType,
+    //    cont_type: &ContentType,
     message: Json<models::Images>,
 ) -> Option<Json<&'static str>> {
-    Some(Json(r##"{"status":"ok"}"##))
-
-    //    if !cont_type.is_form_data() {
-    //        return Err(Custom(
-    //            Status::BadRequest,
-    //            "Content-Type not multipart/form-data".into(),
-    //        ));
-    //    }
-    //
-    //    let (_, boundary) = cont_type.params().find(|&(k, _)| k == "boundary").ok_or_else(
-    //        || Custom(
-    //            Status::BadRequest,
-    //            "`Content-Type: multipart/form-data` boundary param not provided".into(),
-    //        )
-    //    )?;
-    //
-    //    match process_upload(boundary, data) {
-    //        Ok(resp) => Ok(Stream::from(Cursor::new(resp))),
-    //        Err(err) => Err(Custom(Status::InternalServerError, err.to_string()))
-    //    }
-}
-
-use comrak::{markdown_to_html, ComrakOptions};
-
-use rocket::response::content;
-use std::fs;
-
-#[get("/ping")]
-fn pong() -> content::Plain<String> {
-    content::Plain("pong".to_string())
-}
-
-#[get("/")]
-pub fn index() -> content::Html<String> {
-    content::Html(format!(
-        "<html>{}</html>",
-        markdown_to_html(
-            fs::read_to_string("readme.md").unwrap().as_str(),
-            &ComrakOptions::default(),
-        )
-    ))
-
-    // riros read readme.md -> html
-    //     Custom(Status::Ok, "<html><b>ok</b></html>")
-}
-
-#[get("/favicon.ico")]
-fn favicon() -> io::Result<Stream<File>> {
-    File::open("favicon.ico").map(|file| Stream::from(file))
+    dbg!(&message);
+    match process_json(message.into_inner()) {
+        Ok(_) => Some(Json(r##"{"status":"ok"}"##)),
+        Err(_) => Some(Json(r##"{"status":"error"}"##)),
+    }
 }
 
 #[post("/imgtest/v1", format = "multipart/form-data", data = "<data>")]
@@ -100,15 +60,6 @@ fn imgtestform(
     cont_type: &ContentType,
     data: Data,
 ) -> Result<Stream<Cursor<Vec<u8>>>, Custom<String>> {
-    // this and the next check can be implemented as a request guard but it seems like just
-    // more boilerplate than necessary
-    //    if !cont_type.is_form_data() {
-    //        return Err(Custom(
-    //            Status::BadRequest,
-    //            "Content-Type not multipart/form-data".into(),
-    //        ));
-    //    }
-
     let (_, boundary) = cont_type
         .params()
         .find(|&(k, _)| k == "boundary")
@@ -125,24 +76,45 @@ fn imgtestform(
     }
 }
 
-//#[catch(404)]
-//fn not_found(req: &rocket::Request) -> JsonValue {
-//    dbg!(req);
-//    json!({
-//        "status": "error",
-//        "reason": "unknown"
-//    })
-//}
+#[get("/ping")]
+fn pong() -> content::Plain<String> {
+    content::Plain("pong".to_string())
+}
+
+#[get("/")]
+pub fn index() -> content::Html<String> {
+    content::Html(format!(
+        "<html>{}</html>",
+        markdown_to_html(
+            fs::read_to_string("readme.md").unwrap().as_str(),
+            &ComrakOptions::default(),
+        )
+    ))
+}
+
+#[get("/favicon.ico")]
+fn favicon() -> io::Result<Stream<File>> {
+    File::open("favicon.ico").map(|file| Stream::from(file))
+}
+
+#[catch(404)]
+fn not_found(req: &rocket::Request) -> JsonValue {
+    dbg!(req);
+    json!({
+        "status": "error",
+        "reason": "unknown"
+    })
+}
 
 #[catch(500)]
 fn internal_error() -> &'static str {
     "Whoops! Looks like we messed up."
 }
 
-#[catch(404)]
-fn not_found(req: &Request) -> String {
-    format!("I couldn't find '{}'. Try something else?", req.uri())
-}
+//#[catch(404)]
+//fn not_found(req: &Request) -> String {
+//    format!("I couldn't find '{}'. Try something else?", req.uri())
+//}
 
 #[catch(400)]
 fn bad_request(req: &Request) -> String {
