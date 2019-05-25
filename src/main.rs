@@ -5,6 +5,7 @@
 extern crate rocket;
 extern crate base64;
 extern crate graceful;
+extern crate lazy_static;
 extern crate mime;
 extern crate multipart;
 extern crate num_traits;
@@ -22,11 +23,13 @@ mod tests;
 
 use rocket::http::{ContentType, Status};
 use rocket::response::status::Custom;
-use rocket::response::Responder;
 use rocket::response::Stream;
 use rocket::{Data, Request, Response, Rocket};
+
+use rocket::http::uri::Origin;
+
 use rocket_contrib::serve::StaticFiles;
-use std::io::{self, Cursor, Read};
+use std::io::{self, Cursor};
 
 mod functions;
 mod models;
@@ -37,9 +40,67 @@ use rocket_contrib::json::{Json, JsonValue};
 use std::fs::File;
 
 use comrak::{markdown_to_html, ComrakOptions};
-use graceful::SignalGuard;
 use rocket::response::content;
 use std::fs;
+
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering, ATOMIC_BOOL_INIT};
+use std::thread;
+use std::time::Duration;
+
+use graceful::SignalGuard;
+
+static STOP: AtomicBool = ATOMIC_BOOL_INIT;
+
+use rocket::fairing::{AdHoc, Fairing, Info, Kind};
+use std::thread::sleep;
+use url::Url;
+
+static WORK_COUNT: AtomicUsize = AtomicUsize::new(0);
+static WORKS_ESTIMATE: AtomicUsize = AtomicUsize::new(1);
+static SHUTDOWN: AtomicBool = AtomicBool::new(false);
+
+//use std::sync::mpsc::{channel, sync_channel, Receiver, Sender};
+
+#[derive(Default)]
+struct Watchdog {}
+
+impl Fairing for Watchdog {
+    fn info(&self) -> Info {
+        Info {
+            name: "Work watchdog",
+            kind: Kind::Request | Kind::Response,
+        }
+    }
+
+    fn on_request(&self, request: &mut Request, _: &Data) {
+        if SHUTDOWN.load(Ordering::SeqCst) {
+            WORK_COUNT.fetch_add(1, Ordering::SeqCst);
+            request.set_uri(Origin::parse("/ping").unwrap());
+        } else {
+            WORK_COUNT.fetch_add(1, Ordering::SeqCst);
+            WORKS_ESTIMATE.store(WORK_COUNT.load(Ordering::SeqCst), Ordering::SeqCst)
+        }
+
+        //        }
+    }
+
+    fn on_response(&self, request: &Request, response: &mut Response) {
+        if SHUTDOWN.load(Ordering::SeqCst) {
+            if WORKS_ESTIMATE.load(Ordering::SeqCst) < WORK_COUNT.load(Ordering::SeqCst) {
+                let body = format!("Server Busy... Shutting down... Try later.");
+                response.set_status(Status::ServiceUnavailable);
+                response.set_header(ContentType::Plain);
+                response.set_sized_body(Cursor::new(body));
+
+                WORK_COUNT.fetch_sub(1, Ordering::SeqCst);
+            } else {
+                WORKS_ESTIMATE.store(WORK_COUNT.fetch_sub(1, Ordering::SeqCst), Ordering::SeqCst)
+            }
+        } else {
+            WORK_COUNT.fetch_sub(1, Ordering::SeqCst);
+        }
+    }
+}
 
 #[post("/imgtest/v1", format = "json", data = "<message>")]
 // signature requires the request to have a `Content-Type`
@@ -81,6 +142,12 @@ fn pong() -> content::Plain<String> {
     content::Plain("pong".to_string())
 }
 
+#[get("/sleep/<sec>")]
+fn hsleep(sec: u64) -> content::Plain<String> {
+    sleep(Duration::new(sec, 0));
+    content::Plain("done".to_string())
+}
+
 #[get("/")]
 pub fn index() -> content::Html<String> {
     content::Html(format!(
@@ -102,7 +169,7 @@ fn not_found(req: &rocket::Request) -> JsonValue {
     dbg!(req);
     json!({
         "status": "error",
-        "reason": "unknown"
+        "reason": "Resource was not found."
     })
 }
 
@@ -111,44 +178,54 @@ fn internal_error() -> &'static str {
     "Whoops! Looks like we messed up."
 }
 
-//#[catch(404)]
-//fn not_found(req: &Request) -> String {
-//    format!("I couldn't find '{}'. Try something else?", req.uri())
-//}
-
 #[catch(400)]
 fn bad_request(req: &Request) -> String {
     dbg!(req);
     format!("I couldn't find '{}'. Try something else?", req.uri())
 }
 
-//fn handle_400<'r>(req: &'r Request) -> Result<Response<'r>, Status> {
-//    dbg!(&req);
-//    let res = Custom(Status::NotFound, format!("404: {}", req.uri()));
-//    res.respond_to(req)
-//}
-
 pub fn rocket() -> Rocket {
+    //    let mut wd = Watchdog {
+    //        active_connections: ac,
+    //    };
+
     rocket::ignite()
         .mount(
             "/",
-            routes![imgtestform, index, favicon, pong, imgtestjson,],
+            routes![imgtestform, index, favicon, pong, imgtestjson, hsleep,],
         )
         .mount("/static", StaticFiles::from("static"))
+        .attach(Watchdog::default())
         .register(catchers![not_found, internal_error, bad_request])
 }
 
 pub fn main() {
-    //    let signal_guard = SignalGuard::new();
-    //    signal_guard.at_exit(move |sig| {
-    //        println!("Signal {} received.", sig);
-    //        while rayon::current_num_threads() > 0 {
-    //            println!("wait thread work, sleep 1 sec ...");
-    //            sleep(std::time::Duration::new(1, 0));
-    //        }
-    //    });
+    let rocket = thread::spawn(move || {
+        println!("Rocket server start...");
+        rocket().launch();
+        println!("Rocket end...");
+    });
 
-    println!("Start server...");
-    rocket().launch();
-    println!("Shutting down server...");
+    let signal_guard = SignalGuard::new();
+
+    let watchdog = thread::spawn(|| {
+        println!("Worker thread started. Type Ctrl+C to stop.");
+        while !STOP.load(Ordering::Acquire) {
+            //            println!("still working...");
+            thread::sleep(Duration::from_millis(5000));
+        }
+        while WORK_COUNT.load(Ordering::SeqCst) > 0 {
+            //            println!("waiting works done... Sleep 500ms...");
+            thread::sleep(Duration::from_millis(50));
+        }
+
+        println!("Rocket shutting down .");
+    });
+
+    signal_guard.at_exit(move |sig| {
+        println!("Signal {} received.", sig);
+        STOP.store(true, Ordering::Release);
+        SHUTDOWN.store(true, Ordering::Release);
+        watchdog.join().unwrap();
+    });
 }

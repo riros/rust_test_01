@@ -7,14 +7,11 @@ use multipart::server::{FieldHeaders, Multipart};
 use rayon::prelude::*;
 use rocket::http::hyper::mime::{Mime, SubLevel, TopLevel};
 use rocket::Data;
-use std::fs;
 use std::io::{self, Write};
 use url::Url;
 
 use crate::models::{ImageInterface, ImageStruct};
 use std::path::PathBuf;
-
-use raster::Image;
 
 use crate::models::Images;
 
@@ -80,7 +77,7 @@ pub fn process_entries(entries: Entries, out: &mut Vec<u8>) -> io::Result<()> {
                         _ => eprintln!("{:?}", "Mime type not Image/(jpg|png)"),
                     },
                     _ => {
-                        println!("No content type. Process text as url");
+                        //                        println!("No content type. Process text as url");
                         match sd {
                             SavedData::Text(txt) => {
                                 let url_parser = Url::parse(txt.as_str());
@@ -89,7 +86,7 @@ pub fn process_entries(entries: Entries, out: &mut Vec<u8>) -> io::Result<()> {
                                         imgs.push(ImageInterface::from_url(&_url));
                                     }
                                     Err(p) => eprintln!(
-                                        "unsupported text '{}' with error: '{}'",
+                                        "Error parse url: unsupported text '{}' with error: '{}'",
                                         txt,
                                         p.to_string()
                                     ),
@@ -109,11 +106,14 @@ pub fn process_entries(entries: Entries, out: &mut Vec<u8>) -> io::Result<()> {
 
         dbg!(&imgs);
 
-        println!("Start {} threads.", rayon::current_num_threads());
+        println!(
+            "Start {} threads. Processing...",
+            rayon::current_num_threads()
+        );
         // Start rayon multiprocess
         imgs.into_par_iter()
             .try_for_each(|i| i.make_thumbnail(100, 100))
-            .expect("Что-то пошло не так ;)");
+            .expect("something is wrong in rayon ;)");
         println!("Threads done.");
 
         //        entries.write_debug(tee)?;

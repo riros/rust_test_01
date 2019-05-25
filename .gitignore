@@ -3,4 +3,4 @@
 media/thumbnails/*.jpg
 media/thumbnails/*.png
 media/thumbnails/*.jpeg
-
+Cargo.lock

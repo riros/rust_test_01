@@ -32,30 +32,44 @@ ___
 ___
 ### Install
 
-TODO
+##### Clone Git
+```
+    $   git clone https://github.com/riros/rust_test_01.git
+    $   cd rust_test_01
+```
+##### Install Rust
+```
+    $   curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+```
+##### Run 
+```
+    $   cagro test
+    $   cargo run
+```
+
 
 ----
 ### Use
 - [http://localhost:8000/imgtest/v1](http://localhsot:8000/imgtest/v1).  
-    в зависимости от типа контента будет соответствующий ответ.  
+    applications/json , multipart/form-data requests supported.  
 - run tests
     ```
-    cargo test
+    $   cargo test
     ```
-
+- see tests code
 ___
 ### Tips
 - *Библиотека ruster очень медленная и не удобная, не стал время тратить на эксперементы и поиски быстрой.*
     Конечно можно было использовать встроенную, но, как повезло.  
 - *Время на рефакторинг не тратил*
-- *Unit тестов нет*
-- *Миниатюры изображений сохраняются в папку media/thumbnails от Form запросов.*
-- *Для json запросов миниатюры отдаются в base64 кодировке в ответе.*
+- *Unit тестов нет, только интеграционные*
+- *Миниатюры изображений сохраняются в папку media/thumbnails*
 
 ---
 ### Todo
+- More tests
 - Error handling
 - refactoring
-- watermark functional
-- replace raster
-- webp support
+  - migrate to tide
+  - watermark functional
+  - replace raster
