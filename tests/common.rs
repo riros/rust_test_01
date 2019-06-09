@@ -2,7 +2,7 @@ use std::process::{Child, Command};
 
 use std::thread::sleep;
 
-use std::sync::{Arc, Mutex};
+//use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 pub fn setup() {
@@ -11,57 +11,35 @@ pub fn setup() {
     // servers, etc.
 }
 
-#[derive(Debug)]
-pub enum RocketServerStatus {
-    Running,
-    //    GracefulShutdownProcess,
-    Shutdown,
-}
+//#[derive(Debug)]
+//pub enum RocketServerStatus {
+//    Running,
+//    Shutdown,
+//}
 
 pub struct RocketLocalhostServer {
-    cmd: Command,
+//    cmd: Command,
     proc: Result<Child, &'static str>,
-    status: RocketServerStatus,
+//    status: RocketServerStatus,
 }
-
-//impl Default for RocketLocalhostServer {
-//    fn default() -> Self {
-//        let mut cmd = Command::new("cargo");
-//        cmd.env("ROCKET_PORT", "8000");
-//        let proc = cmd.args(&["run"]).spawn();
-//        let (status, child) = match proc {
-//            Ok(se) => (RocketServerStatus::Running, Ok(se)),
-//
-//            Err(_e) => (RocketServerStatus::Shutdown, Err("Spawn process failed.")),
-//        };
-//        sleep(Duration::new(3, 0));
-//        //        child.unwrap().kill();
-//
-//        RocketLocalhostServer {
-//            cmd: cmd,
-//            proc: child,
-//            status: status,
-//        }
-//    }
-//}
 
 impl RocketLocalhostServer {
     pub fn new(port: &str) -> Self {
         let mut cmd = Command::new("cargo");
         cmd.env("ROCKET_PORT", port);
         let proc = cmd.args(&["run"]).spawn();
-        let (status, child) = match proc {
-            Ok(se) => (RocketServerStatus::Running, Ok(se)),
+        let child = match proc {
+            Ok(se) => Ok(se),
 
-            Err(_e) => (RocketServerStatus::Shutdown, Err("Spawn process failed.")),
+            Err(_e) =>  Err("Spawn process failed."),
         };
         sleep(Duration::new(3, 0));
         //        child.unwrap().kill();
 
         RocketLocalhostServer {
-            cmd: cmd,
+//            cmd: cmd,
             proc: child,
-            status: status,
+//            status: status,
         }
     }
 

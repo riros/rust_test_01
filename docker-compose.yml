@@ -1,0 +1,10 @@
+version : '3'
+
+services:
+  rustweb:
+    build: .
+    ports:
+      - 8000:8000/tcp
+    volumes:
+      - ./media/:/media
+

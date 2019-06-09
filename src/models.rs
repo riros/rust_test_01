@@ -7,7 +7,6 @@ use rand::{thread_rng, Rng};
 use raster::error::RasterError;
 use raster::Image;
 use reqwest::Client;
-//use rocket_contrib::json::{Json, JsonValue};
 use std::fs::{remove_file, rename, File};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};

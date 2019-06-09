@@ -1,6 +1,5 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 #![feature(plugin, custom_attribute)]
-
 #[macro_use]
 extern crate rocket;
 extern crate base64;
@@ -43,23 +42,21 @@ use comrak::{markdown_to_html, ComrakOptions};
 use rocket::response::content;
 use std::fs;
 
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering, ATOMIC_BOOL_INIT};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread;
 use std::time::Duration;
 
 use graceful::SignalGuard;
 
-static STOP: AtomicBool = ATOMIC_BOOL_INIT;
+static STOP: AtomicBool = AtomicBool::new(false);
 
-use rocket::fairing::{AdHoc, Fairing, Info, Kind};
+use rocket::fairing::{Fairing, Info, Kind};
 use std::thread::sleep;
-use url::Url;
 
 static WORK_COUNT: AtomicUsize = AtomicUsize::new(0);
 static WORKS_ESTIMATE: AtomicUsize = AtomicUsize::new(1);
 static SHUTDOWN: AtomicBool = AtomicBool::new(false);
 
-//use std::sync::mpsc::{channel, sync_channel, Receiver, Sender};
 
 #[derive(Default)]
 struct Watchdog {}
@@ -84,7 +81,9 @@ impl Fairing for Watchdog {
         //        }
     }
 
-    fn on_response(&self, request: &Request, response: &mut Response) {
+    fn on_response(&self,
+                   _: &Request
+                   , response: &mut Response) {
         if SHUTDOWN.load(Ordering::SeqCst) {
             if WORKS_ESTIMATE.load(Ordering::SeqCst) < WORK_COUNT.load(Ordering::SeqCst) {
                 let body = format!("Server Busy... Shutting down... Try later.");
@@ -180,15 +179,10 @@ fn internal_error() -> &'static str {
 
 #[catch(400)]
 fn bad_request(req: &Request) -> String {
-    dbg!(req);
     format!("I couldn't find '{}'. Try something else?", req.uri())
 }
 
 pub fn rocket() -> Rocket {
-    //    let mut wd = Watchdog {
-    //        active_connections: ac,
-    //    };
-
     rocket::ignite()
         .mount(
             "/",
@@ -200,16 +194,16 @@ pub fn rocket() -> Rocket {
 }
 
 pub fn main() {
-    let rocket = thread::spawn(move || {
-        println!("Rocket server start...");
+    thread::spawn(move || {
+//        println!("Rocket server start...");
         rocket().launch();
-        println!("Rocket end...");
+//        println!("Rocket end...");
     });
 
     let signal_guard = SignalGuard::new();
 
     let watchdog = thread::spawn(|| {
-        println!("Worker thread started. Type Ctrl+C to stop.");
+//        println!("Worker thread started. Type Ctrl+C to stop.");
         while !STOP.load(Ordering::Acquire) {
             //            println!("still working...");
             thread::sleep(Duration::from_millis(5000));
@@ -219,7 +213,7 @@ pub fn main() {
             thread::sleep(Duration::from_millis(50));
         }
 
-        println!("Rocket shutting down .");
+//        println!("Rocket shutting down .");
     });
 
     signal_guard.at_exit(move |sig| {

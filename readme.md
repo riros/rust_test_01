@@ -1,3 +1,5 @@
+[https://travis-ci.org/riros/rust_test_01.svg?branch=master](https://travis-ci.org/riros/rust_test_01.svg?branch=master)
+
 Task:
 -------
 
@@ -16,8 +18,8 @@ Task:
  Любые другие аспекты реализации, которые не указаны в требованиях, могут быть выполнены на Ваше усмотрение.
 
 Следующее будет плюсом:
-- [ ] \(Optional) Корректное завершение приложения при получении сигнала ОС (graceful shutdown).
-- [ ] \(Optional) Dockerfile и docker-compose.yml, которые позволяют поднять приложение единой docker-compose up командой.
+- [X] \(Optional) Корректное завершение приложения при получении сигнала ОС (graceful shutdown).
+- [X] \(Optional) Dockerfile и docker-compose.yml, которые позволяют поднять приложение единой docker-compose up командой.
 - [ ] \(Optional) CI интеграция (Travis CI, Circle CI, другие).
 
 Тестовое задание должно быть предоставлено в виде ссылки на публичный репозиторий (GitHub, BitBucket, GitLab),
@@ -47,6 +49,11 @@ ___
     $   cargo run
 ```
 
+---
+### Use Docker
+```
+    $   docker-compose up
+```
 
 ----
 ### Use
@@ -67,8 +74,7 @@ ___
 
 ---
 ### Todo
-- More tests
-- Error handling
+- More error handling
 - refactoring
   - migrate to tide
   - watermark functional

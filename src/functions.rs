@@ -104,7 +104,7 @@ pub fn process_entries(entries: Entries, out: &mut Vec<u8>) -> io::Result<()> {
             }
         }
 
-        dbg!(&imgs);
+//        dbg!(&imgs);
 
         println!(
             "Start {} threads. Processing...",

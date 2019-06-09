@@ -6,13 +6,9 @@ extern crate file_diff;
 extern crate mime;
 extern crate reqwest;
 
-//use reqwest::multipart::{Form, Part};
-//use serde_json;
 
 use core::borrow::BorrowMut;
 use file_diff::diff_files;
-//use rocket_contrib::json::Json;
-//use rocket_contrib::json::JsonValue;
 use std::fs::File;
 use std::fs::{read_to_string, remove_file};
 
@@ -105,33 +101,3 @@ fn remove_fiels() {
     remove_file(String::from(THUMBPATH) + "img.json.png").unwrap_or_default();
     remove_file(String::from(THUMBPATH) + "img.json.link.jpg").unwrap_or_default();
 }
-
-//
-//#[test]
-//fn test_hello() {
-//    let person = Person { name: "Michael".to_string(), age: 80, };
-//    let body = serde_json::to_string(&person).unwrap();
-//    test(Method::Get, "/hello/Michael/80", Accept::JSON, Status::Ok, body.clone());
-//    test(Method::Get, "/hello/Michael/80", Accept::Any, Status::Ok, body.clone());
-//
-//    // No `Accept` header is an implicit */*.
-//    test(Method::Get, "/hello/Michael/80", ContentType::XML, Status::Ok, body);
-//
-//    let person = Person { name: "".to_string(), age: 99, };
-//    let body = serde_json::to_string(&person).unwrap();
-//    test(Method::Post, "/hello/99", ContentType::Plain, Status::Ok, body);
-//}
-//
-//#[test]
-//fn test_hello_invalid_content_type() {
-//    let b = format!("<p>'{}' requests are not supported.</p>", MediaType::HTML);
-//    test(Method::Get, "/hello/Michael/80", Accept::HTML, Status::NotFound, b.clone());
-//    test(Method::Post, "/hello/80", ContentType::HTML, Status::NotFound, b);
-//}
-//
-//#[test]
-//fn test_404() {
-//    let body = "<p>Sorry, '/unknown' is an invalid path! Try \
-//                /hello/&lt;name&gt;/&lt;age&gt; instead.</p>";
-//    test(Method::Get, "/unknown", Accept::JSON, Status::NotFound, body.to_string());
-//}
