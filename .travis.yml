@@ -1,0 +1,20 @@
+language: rust
+rust:
+  - nightly
+env:
+  - RUSTFLAGS="-C target-cpu=native"
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+cache: cargo
+
+script:
+  - cat /proc/cpuinfo
+  - cargo build --all
+  - cargo test --all
+
+notifications:
+  email: false
+
+os: linux

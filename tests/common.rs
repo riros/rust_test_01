@@ -33,7 +33,7 @@ impl RocketLocalhostServer {
 
             Err(_e) =>  Err("Spawn process failed."),
         };
-        sleep(Duration::new(3, 0));
+        sleep(Duration::new(5, 0));
         //        child.unwrap().kill();
 
         RocketLocalhostServer {

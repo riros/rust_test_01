@@ -1,4 +1,4 @@
-[https://travis-ci.org/riros/rust_test_01.svg?branch=master](https://travis-ci.org/riros/rust_test_01.svg?branch=master)
+[![Build Status](https://travis-ci.org/riros/rust_test_01.svg?branch=master)](https://travis-ci.org/riros/rust_test_01)
 
 Task:
 -------
@@ -20,7 +20,7 @@ Task:
 Следующее будет плюсом:
 - [X] \(Optional) Корректное завершение приложения при получении сигнала ОС (graceful shutdown).
 - [X] \(Optional) Dockerfile и docker-compose.yml, которые позволяют поднять приложение единой docker-compose up командой.
-- [ ] \(Optional) CI интеграция (Travis CI, Circle CI, другие).
+- [X] \(Optional) CI интеграция (Travis CI, Circle CI, другие).
 
 Тестовое задание должно быть предоставлено в виде ссылки на публичный репозиторий (GitHub, BitBucket, GitLab),
  содержащий исходный код приложения и необходимые инструкции по сборке и запуску.
@@ -57,20 +57,13 @@ ___
 
 ----
 ### Use
-- [http://localhost:8000/imgtest/v1](http://localhsot:8000/imgtest/v1).  
+- [http://0.0.0.0:8000/imgtest/v1](http://0.0.0.0:8000/imgtest/v1).  
     applications/json , multipart/form-data requests supported.  
 - run tests
     ```
     $   cargo test
     ```
 - see tests code
-___
-### Tips
-- *Библиотека ruster очень медленная и не удобная, не стал время тратить на эксперементы и поиски быстрой.*
-    Конечно можно было использовать встроенную, но, как повезло.  
-- *Время на рефакторинг не тратил*
-- *Unit тестов нет, только интеграционные*
-- *Миниатюры изображений сохраняются в папку media/thumbnails*
 
 ---
 ### Todo
@@ -79,3 +72,11 @@ ___
   - migrate to tide
   - watermark functional
   - replace raster
+
+___
+##### Заметки
+- *Библиотека ruster очень медленная и не удобная, не стал время тратить на эксперементы и поиски быстрой.*
+    Конечно можно было использовать встроенную, но, как повезло.  
+- *Время на рефакторинг не тратил*
+- *Unit тестов нет, только интеграционные*
+- *Миниатюры изображений сохраняются в папку media/thumbnails*

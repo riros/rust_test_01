@@ -52,7 +52,7 @@ fn test_request_multipart_form_process() {
 
     let service = reqwest::Client::new();
     let resp = service
-        .post(format!("http://localhost:{}/imgtest/v1", PORT).as_str()) // TODO dynamic port
+        .post(format!("http://127.0.0.1:{}/imgtest/v1", PORT).as_str()) // TODO dynamic port
         .multipart(Form::new()
             .part("text1", Part::text("this part of text. must be skipped... "))
             .part("file1", Part::file("./tests/data/img.jpg").unwrap())
@@ -99,7 +99,7 @@ fn test_graceful_shutdown() {
     let thr = thread::spawn(|| {
         let service = reqwest::Client::new();
         let resp = service
-            .get(format!("http://localhost:{}/sleep/10", PORT).as_str()) // TODO dynamic port
+            .get(format!("http://127.0.0.1:{}/sleep/10", PORT).as_str()) // TODO dynamic port
             .send()
             .unwrap();
 
@@ -117,7 +117,7 @@ fn test_graceful_shutdown() {
 
     let service = reqwest::Client::new();
     let resp = service
-        .get(format!("http://localhost:{}/sleep/10", PORT).as_str()) // TODO dynamic port
+        .get(format!("http://127.0.0.1:{}/sleep/10", PORT).as_str()) // TODO dynamic port
         .send()
         .unwrap();
 
